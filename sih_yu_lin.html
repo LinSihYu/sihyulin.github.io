@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH YU LIN — FILM EDITOR</title>
+
+    <!-- 引入 Google Fonts：Noto Serif TC（藝文襯線）、Noto Sans TC（內文黑體）、Cormorant Garamond（英文襯線）、Inter（英文無襯線） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind 自訂主題設定（色票、字體與柔和淡入動畫） -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        paper: '#FAF9F6',     // 溫潤極淺灰白背景
+                        ink: '#1A1A1A',       // 深炭黑主文字
+                        muted: '#737373',     // 中性灰次要資訊
+                        hairline: '#E5E5E3',  // 極細分隔線
+                        cinema: '#141414',    // 燈箱與影片區深色底
+                    },
+                    fontFamily: {
+                        'serif-tc': ['"Noto Serif TC"', 'serif'],
+                        'sans-tc': ['"Noto Sans TC"', 'sans-serif'],
+                        'serif-en': ['"Cormorant Garamond"', 'serif'],
+                        'sans-en': ['"Inter"', 'sans-serif'],
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        modalIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.98)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+                        'modal-in': 'modalIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-paper text-ink font-sans-tc antialiased selection:bg-ink selection:text-paper overflow-x-hidden min-h-screen flex flex-col">
+
+    <!-- ==================== 頂部固定導覽列 ==================== -->
+    <header class="fixed top-0 left-0 right-0 z-40 bg-paper/85 backdrop-blur-md border-b border-hairline transition-colors">
+        <div class="max-w-6xl mx-auto px-6 sm:px-10 h-20 flex items-center justify-between">
+            
+            <!-- 左側品牌標誌（點擊返回「個人資訊」） -->
+            <button 
+                id="brand-logo"
+                type="button"
+                onclick="navigateTo('about')" 
+                class="group text-left focus:outline-none py-2"
+                aria-label="回到個人資訊首頁"
+            >
+                <span class="block font-serif-en text-xl sm:text-2xl tracking-[0.18em] text-ink font-medium leading-none group-hover:opacity-70 transition-opacity">
+                    SIH YU LIN
+                </span>
+                <span class="block font-sans-en text-[10px] tracking-[0.28em] text-muted uppercase mt-1.5 leading-none">
+                    FILM EDITOR
+                </span>
+            </button>
+
+            <!-- 桌機版導覽選單 -->
+            <nav class="hidden md:flex items-center space-x-9" aria-label="主導覽列">
+                <button type="button" data-nav="about" onclick="navigateTo('about')" class="nav-link relative py-2 text-sm tracking-[0.1em] transition-colors duration-300">
+                    個人資訊
+                </button>
+                <button type="button" data-nav="narrative" onclick="navigateTo('narrative')" class="nav-link relative py-2 text-sm tracking-[0.1em] transition-colors duration-300">
+                    劇情片
+                </button>
+                <button type="button" data-nav="documentary" onclick="navigateTo('documentary')" class="nav-link relative py-2 text-sm tracking-[0.1em] transition-colors duration-300">
+                    紀錄片
+                </button>
+                <button type="button" data-nav="mv" onclick="navigateTo('mv')" class="nav-link relative py-2 text-sm tracking-[0.1em] transition-colors duration-300">
+                    MV
+                </button>
+                <button type="button" data-nav="commercial" onclick="navigateTo('commercial')" class="nav-link relative py-2 text-sm tracking-[0.1em] transition-colors duration-300">
+                    廣告與其他
+                </button>
+            </nav>
+
+            <!-- 手機版極簡漢堡選單按鈕 -->
+            <button 
+                id="mobile-menu-btn"
+                type="button"
+                onclick="toggleMobileMenu()"
+                class="md:hidden p-3 -mr-3 text-ink focus:outline-none"
+                aria-label="開啟導覽選單"
+                aria-expanded="false"
+            >
+                <div class="w-6 h-4 flex flex-col justify-between items-end">
+                    <span id="burger-line-1" class="block h-[1px] w-6 bg-ink transition-all duration-300 origin-center"></span>
+                    <span id="burger-line-2" class="block h-[1px] w-4 bg-ink transition-all duration-300"></span>
+                    <span id="burger-line-3" class="block h-[1px] w-6 bg-ink transition-all duration-300 origin-center"></span>
+                </div>
+            </button>
+        </div>
+    </header>
+
+    <!-- ==================== 手機版全螢幕展開選單 ==================== -->
+    <div 
+        id="mobile-menu" 
+        class="fixed inset-0 z-30 bg-paper/98 backdrop-blur-lg flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300 md:hidden"
+        aria-hidden="true"
+    >
+        <nav class="flex flex-col items-center space-y-8" aria-label="行動版導覽列">
+            <button type="button" data-mobile-nav="about" onclick="navigateTo('about', true)" class="mobile-nav-link font-serif-tc text-2xl tracking-[0.18em] py-2 transition-colors">
+                個人資訊
+            </button>
+            <button type="button" data-mobile-nav="narrative" onclick="navigateTo('narrative', true)" class="mobile-nav-link font-serif-tc text-2xl tracking-[0.18em] py-2 transition-colors">
+                劇情片
+            </button>
+            <button type="button" data-mobile-nav="documentary" onclick="navigateTo('documentary', true)" class="mobile-nav-link font-serif-tc text-2xl tracking-[0.18em] py-2 transition-colors">
+                紀錄片
+            </button>
+            <button type="button" data-mobile-nav="mv" onclick="navigateTo('mv', true)" class="mobile-nav-link font-serif-tc text-2xl tracking-[0.18em] py-2 transition-colors">
+                MV
+            </button>
+            <button type="button" data-mobile-nav="commercial" onclick="navigateTo('commercial', true)" class="mobile-nav-link font-serif-tc text-2xl tracking-[0.18em] py-2 transition-colors">
+                廣告與其他
+            </button>
+        </nav>
+        <div class="absolute bottom-12 text-center">
+            <p class="font-sans-en text-[11px] tracking-[0.22em] text-muted uppercase">SIH YU LIN — FILM EDITOR</p>
+        </div>
+    </div>
+
+    <!-- ==================== 主內容渲染區（SPA 動態切換） ==================== -->
+    <main id="app-content" class="flex-grow pt-28 sm:pt-36 pb-24 max-w-6xl w-full mx-auto px-6 sm:px-10">
+        <!-- 內容將由 JavaScript 根據目前分頁動態注入 -->
+    </main>
+
+    <!-- ==================== 極簡頁尾 ==================== -->
+    <footer class="border-t border-hairline mt-auto">
+        <div class="max-w-6xl mx-auto px-6 sm:px-10 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="font-sans-en text-xs tracking-[0.12em] text-muted">
+                © 2026 SIH YU LIN. All Rights Reserved.
+            </p>
+            <p class="font-sans-en text-[11px] tracking-[0.18em] text-muted/70 uppercase">
+                Taipei, Taiwan
+            </p>
+        </div>
+    </footer>
+
+    <!-- ==================== 作品播放燈箱（Lightbox Modal） ==================== -->
+    <div 
+        id="project-modal" 
+        class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-8 bg-cinema/92 backdrop-blur-sm overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+    >
+        <!-- 點擊背景關閉的遮罩層 -->
+        <div id="modal-backdrop" class="fixed inset-0" onclick="closeModal()"></div>
+
+        <!-- 燈箱內容容器 -->
+        <div class="relative z-10 w-full max-w-4xl bg-paper text-ink rounded-sm shadow-2xl overflow-hidden my-auto animate-modal-in border border-hairline/20">
+            
+            <!-- 頂部關閉按鈕列 -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-hairline bg-paper">
+                <span id="modal-category-label" class="font-sans-en text-[11px] tracking-[0.22em] text-muted uppercase">
+                    PROJECT PREVIEW
+                </span>
+                <button 
+                    type="button"
+                    onclick="closeModal()"
+                    class="p-2 -mr-2 text-muted hover:text-ink transition-colors focus:outline-none flex items-center gap-2 text-xs font-sans-en tracking-[0.15em]"
+                    aria-label="關閉視窗"
+                >
+                    <span class="hidden sm:inline">ESC</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.25" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 16:9 影片播放區域 -->
+            <div id="modal-video-container" class="relative w-full aspect-video bg-cinema overflow-hidden">
+                <!-- 由 JS 動態放入 iframe 或高質感模擬電影播放介面 -->
+            </div>
+
+            <!-- 作品詳細資訊與剪輯筆記 -->
+            <div class="p-6 sm:p-10 bg-paper">
+                <div class="flex flex-col md:flex-row md:items-baseline justify-between gap-2 pb-6 border-b border-hairline">
+                    <div>
+                        <h3 id="modal-title" class="font-serif-tc text-2xl sm:text-3xl font-normal tracking-wide text-ink"></h3>
+                        <p id="modal-subtitle" class="font-serif-en italic text-base sm:text-lg text-muted mt-1"></p>
+                    </div>
+                    <span id="modal-year" class="font-sans-en text-sm tracking-[0.16em] text-muted shrink-0"></span>
+                </div>
+
+                <!-- 技術資訊網格 -->
+                <div id="modal-meta" class="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6 border-b border-hairline text-sm">
+                    <!-- 由 JS 注入角色、導演/客戶、片長、影展紀錄等 -->
+                </div>
+
+                <!-- 剪輯筆記 / 作品簡介 -->
+                <div class="pt-6">
+                    <h4 class="font-sans-en text-[11px] tracking-[0.2em] text-muted uppercase mb-3">
+                        EDITOR'S NOTE / 簡介
+                    </h4>
+                    <p id="modal-notes" class="text-sm sm:text-base leading-relaxed text-ink/85 font-light"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 優雅提示訊息（Toast） ==================== -->
+    <div 
+        id="toast" 
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-ink text-paper text-xs sm:text-sm tracking-[0.1em] rounded-sm shadow-lg opacity-0 pointer-events-none transition-all duration-300 translate-y-2"
+        role="status"
+        aria-live="polite"
+    >
+        <!-- 提示文字由 JS 動態設定 -->
+    </div>
+
+    <!-- ==================== 網站資料與核心邏輯 ==================== -->
+    <script>
+        /**
+         * =========================================================================
+         * 作品集集中資料庫（PORTFOLIO_DATA）
+         * -------------------------------------------------------------------------
+         * 日後更新網站時，只需要修改這個物件中的文字、圖片網址（thumbnail）與
+         * 影片嵌入網址（videoUrl），即可自動同步整個網站。
+         * 
+         * 【影片連結填寫範例】
+         * - YouTube 嵌入連結：'https://www.youtube.com/embed/你的影片ID'
+         * - Vimeo 嵌入連結：  'https://player.vimeo.com/video/你的影片ID'
+         * - 若暫時留空（''），燈箱會自動呈現極簡電影質感模擬播放畫面。
+         * =========================================================================
+         */
+        const PORTFOLIO_DATA = {
+            // 1. 個人資訊頁資料
+            profile: {
+                nameEn: 'SIH YU LIN',
+                roleEn: 'FILM EDITOR',
+                // 若有個人形象照，可填入圖片網址（例如 './images/portrait.jpg'），留空則顯示極簡灰階光影示意框
+                portraitUrl: '',
+                headline: '在時間的縫隙裡，尋找影像最誠實的呼吸與節奏。',
+                bio: [
+                    '自由接案剪輯師，現居台北。專注於劇情長短片、紀錄片、音樂錄影帶（MV）與影像敘事節奏的建構。',
+                    '我相信剪輯不只是畫面的拼接，更是與導演共同重新書寫劇本的二次創作。透過精準的留白、情緒堆疊與聲音結構，協助每一部作品找到屬於自己的視覺語言。提供正片剪輯、影展預告片剪輯與後期流程整合服務。'
+                ],
+                awards: [
+                    {
+                        year: '2026',
+                        title: '第31屆釜山國際影展（BIFF）亞洲短片競賽單元 入選',
+                        project: '劇情短片《岸邊的霧》— 剪輯'
+                    },
+                    {
+                        year: '2026',
+                        title: '第61屆金鐘獎 電視電影多項大獎 入圍',
+                        project: '電視電影《午後的長鏡頭》— 剪輯'
+                    },
+                    {
+                        year: '2025',
+                        title: '第27屆台北電影獎 最佳短片 入圍',
+                        project: '劇情短片《失重房間》— 剪輯'
+                    },
+                    {
+                        year: '2024',
+                        title: '台灣國際紀錄片影展（TIDF）台灣競賽 觀摩映演',
+                        project: '紀錄片《守燈的人》— 剪輯'
+                    }
+                ],
+                services: [
+                    { title: '劇情片剪輯', desc: '劇情長片、電視電影、影展短片敘事結構與節奏定調' },
+                    { title: '紀錄片剪輯', desc: '龐雜田調素材梳理、人物情感脈絡與觀點建構' },
+                    { title: 'MV 與商業廣告', desc: '音樂律動視覺化、品牌形象片與藝文企劃影像' },
+                    { title: '預告片與後期整合', desc: '影展正式預告片製作、DIT 交接與調光混音前置整理' }
+                ],
+                contact: {
+                    email: 'hello@sihyulin.film',
+                    links: [
+                        { label: 'Instagram', url: 'https://instagram.com' },
+                        { label: 'Vimeo', url: 'https://vimeo.com' },
+                        { label: '個人文章部落格', url: 'https://medium.com' }
+                    ]
+                }
+            },
+
+            // 2. 四大作品分類與清單
+            categories: {
+                narrative: {
+                    titleZh: '劇情片',
+                    titleEn: 'NARRATIVE FILMS',
+                    description: '專注於人物內在轉折與場域氛圍的敘事長短片作品。',
+                    items: [
+                        {
+                            id: 'nar-01',
+                            title: '午後的長鏡頭',
+                            subtitle: 'Long Take in the Afternoon',
+                            year: '2026',
+                            duration: '92 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '陳昱霖',
+                            tag: '2026 金鐘獎多項入圍',
+                            thumbnail: '', // 可替換為 16:9 劇照網址
+                            videoUrl: '',  // 可替換為 YouTube/Vimeo embed URL
+                            tone: 'monochrome-warm',
+                            notes: '本片透過大量自然光與長鏡頭捕捉一對父女在盛夏午後的無聲和解。剪輯策略刻意減少碎剪，保留環境音與人物停頓的呼吸空間，讓壓抑的情感在靜謐中緩緩浮現。'
+                        },
+                        {
+                            id: 'nar-02',
+                            title: '岸邊的霧',
+                            subtitle: 'Fog by the Shore',
+                            year: '2026',
+                            duration: '24 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '林靜宜',
+                            tag: '第31屆釜山影展 BIFF 入選',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'mist-cool',
+                            notes: '一部關於記憶與失落的海岸短片。我們在後期重新調整了三段回憶線的交錯位置，透過海浪聲的跨場延續（J-Cut / L-Cut），模糊現實與夢境的邊界。'
+                        },
+                        {
+                            id: 'nar-03',
+                            title: '失重房間',
+                            subtitle: 'Weightless Room',
+                            year: '2025',
+                            duration: '18 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '張柏豪',
+                            tag: '台北電影獎入圍',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'noir-contrast',
+                            notes: '單一密閉空間內的雙人心理博弈。剪輯節奏由前段的鬆散日常逐漸收緊，中後段配合細微的眼神跳接與窒息感留白，建構出強烈的心理張力。'
+                        },
+                        {
+                            id: 'nar-04',
+                            title: '未寄出的明信片',
+                            subtitle: 'Unsent Postcards',
+                            year: '2024',
+                            duration: '105 min',
+                            role: '協力剪輯 Assistant Editor',
+                            creditLabel: '導演',
+                            creditValue: '吳明翰',
+                            tag: '金馬影展觀摩單元',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'sepia-soft',
+                            notes: '跨國拍攝的公路電影長片。負責前期素材整理、場記同步、部分段落初剪以及最終調光與聲音後期的 AAF/XML 交接流程。'
+                        }
+                    ]
+                },
+
+                documentary: {
+                    titleZh: '紀錄片',
+                    titleEn: 'DOCUMENTARY',
+                    description: '在真實素材中傾聽受訪者的聲音，梳理時間沉澱出的故事結構。',
+                    items: [
+                        {
+                            id: 'doc-01',
+                            title: '守燈的人',
+                            subtitle: 'The Lightkeeper',
+                            year: '2026',
+                            duration: '52 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '黃子維',
+                            tag: '台灣國際紀錄片影展入選',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'mist-cool',
+                            notes: '歷時三年跟拍離島燈塔技工的退休日常。從超過 180 小時的紀實素材中，捨棄傳統旁白，改以日常勞動的重複韻律與四季更迭，勾勒出孤獨與職責的重量。'
+                        },
+                        {
+                            id: 'doc-02',
+                            title: '城市邊緣的聲音',
+                            subtitle: 'Echoes on the Margin',
+                            year: '2025',
+                            duration: '38 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '許佳寧',
+                            tag: '公共電視紀實單元',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'noir-contrast',
+                            notes: '記錄老舊工業區改建前夕，當地居民與移工的生活切片。剪輯上採取多線並行結構，讓不同世代的訪談彼此呼應，呈現城市更新背後的複雜面向。'
+                        },
+                        {
+                            id: 'doc-03',
+                            title: '紙上建築：工藝師的二十四小時',
+                            subtitle: 'Architecture on Paper',
+                            year: '2024',
+                            duration: '28 min',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '周品言',
+                            tag: '誠品藝文特展映演',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'monochrome-warm',
+                            notes: '近距離凝視手工製紙與裝幀藝術家的創作過程。著重於手部微距動作與紙張摩擦聲的節奏呼應，營造出近似冥想般的觀影體驗。'
+                        }
+                    ]
+                },
+
+                mv: {
+                    titleZh: 'MV 作品',
+                    titleEn: 'MUSIC VIDEOS',
+                    description: '回應旋律的起伏與歌詞的留白，為音樂建立具象的情緒空間。',
+                    items: [
+                        {
+                            id: 'mv-01',
+                            title: '淺堤 Shallow Levée —《信使》',
+                            subtitle: 'The Messenger — Official Music Video',
+                            year: '2026',
+                            duration: '04:32',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '蘇哲賢',
+                            tag: '獨立樂團 MV',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'sepia-soft',
+                            notes: '配合歌曲溫暖卻略帶惆悵的吉他編曲，以 16mm 膠捲質感的畫面交錯剪輯港都的黃昏街景與樂團演出，在副歌爆發處精準對點釋放情緒。'
+                        },
+                        {
+                            id: 'mv-02',
+                            title: '落日飛車 Sunset Rollercoaster —《午夜微風》',
+                            subtitle: 'Midnight Breeze — Official Music Video',
+                            year: '2025',
+                            duration: '04:15',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '殷振豪',
+                            tag: '音樂錄影帶',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'noir-contrast',
+                            notes: '帶有迷幻復古色調的夜間公路敘事。運用略帶漂浮感的溶鏡（Dissolve）與反拍切點，呼應合成器慵懶而迷人的律動感。'
+                        },
+                        {
+                            id: 'mv-03',
+                            title: '鄭宜農 Enno Cheng —《空白頁》',
+                            subtitle: 'Blank Page — Official Music Video',
+                            year: '2025',
+                            duration: '05:04',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '談宗藩',
+                            tag: '音樂錄影帶',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'mist-cool',
+                            notes: '極簡黑白光影下的現代舞演出。剪輯過程完全順應舞者肢體延伸的動能，在樂曲休止符瞬間切入靜止特寫，創造極致的視覺留白。'
+                        },
+                        {
+                            id: 'mv-04',
+                            title: '怕胖團 PAPUN BAND —《在沒有光的地方等你》',
+                            subtitle: 'Waiting in the Dark — Official Music Video',
+                            year: '2024',
+                            duration: '03:58',
+                            role: '剪輯 Editor',
+                            creditLabel: '導演',
+                            creditValue: '彭道森',
+                            tag: '樂團演出 MV',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'monochrome-warm',
+                            notes: '高能量現場感與青春敘事交織。透過快節奏的動作剪接與鼓點同步，強化歌曲後段的熱血張力與共鳴。'
+                        }
+                    ]
+                },
+
+                commercial: {
+                    titleZh: '廣告與其他',
+                    titleEn: 'COMMERCIAL & OTHERS',
+                    description: '品牌形象影片、商業廣告、影展正式預告片與藝文演出前導。',
+                    items: [
+                        {
+                            id: 'com-01',
+                            title: 'Aesop 台灣 —《感官與靜謐》',
+                            subtitle: 'Senses & Stillness — Brand Film',
+                            year: '2026',
+                            duration: '02:15',
+                            role: '剪輯 Editor',
+                            creditLabel: '品牌 / 客戶',
+                            creditValue: 'Aesop Taiwan',
+                            tag: '品牌形象片',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'sepia-soft',
+                            notes: '以空間建築、水滴、木質紋理與自然光影建構品牌美學。剪輯節奏優雅克制，讓觀眾在短短兩分鐘內沉浸於品牌欲傳遞的靜謐儀式感。'
+                        },
+                        {
+                            id: 'com-02',
+                            title: '《岸邊的霧》釜山影展正式預告片',
+                            subtitle: 'Fog by the Shore — Official Festival Trailer',
+                            year: '2026',
+                            duration: '01:30',
+                            role: '預告片剪輯 Trailer Editor',
+                            creditLabel: '委託單位',
+                            creditValue: '海風影業',
+                            tag: '影展預告片',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'mist-cool',
+                            notes: '為國際影展首映量身打造的 90 秒預告。在不劇透核心轉折的前提下，以三句關鍵對白搭配漸強的環境音效，精準勾起國際觀眾與選片人的好奇心。'
+                        },
+                        {
+                            id: 'com-03',
+                            title: '無印良品 MUJI —《日常的留白》',
+                            subtitle: 'Space in Everyday Life — Annual Campaign',
+                            year: '2025',
+                            duration: '01:45',
+                            role: '剪輯 Editor',
+                            creditLabel: '品牌 / 客戶',
+                            creditValue: 'MUJI Taiwan',
+                            tag: '商業廣告',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'monochrome-warm',
+                            notes: '年度形象企劃影片，同時剪輯 90 秒完整版與 30 秒電視廣告版。以清晨至夜晚的居家光線變化為軸線，呈現簡約舒適的生活態度。'
+                        },
+                        {
+                            id: 'com-04',
+                            title: '國家兩廳院 —《身體的邊界》演出前導片',
+                            subtitle: 'Boundaries of the Body — Teaser',
+                            year: '2024',
+                            duration: '01:20',
+                            role: '剪輯 Editor',
+                            creditLabel: '委託單位',
+                            creditValue: '國家兩廳院 NTCH',
+                            tag: '藝文前導片',
+                            thumbnail: '',
+                            videoUrl: '',
+                            tone: 'noir-contrast',
+                            notes: '當代舞蹈藝術節前導宣傳片。結合排練室的真實喘息聲與俐落的黑白跳接，在短時間內展現舞作前衛且充滿張力的視覺語彙。'
+                        }
+                    ]
+                }
+            }
+        };
+
+        // 目前狀態
+        let currentPage = 'about';
+        let isMobileMenuOpen = false;
+        let toastTimer = null;
+
+        /**
+         * 產生極簡電影感 16:9 預留劇照 SVG（當使用者尚未填入 thumbnail 網址時自動顯示）
+         * @param {string} tone - 色調風格
+         * @param {string} subtitle - 英文副標，作為畫面微弱浮水印
+         * @returns {string} HTML 字串
+         */
+        function createCinematicPlaceholder(tone, subtitle) {
+            const palettes = {
+                'monochrome-warm': { bg1: '#2A2826', bg2: '#161514', accent: '#D6D0C4' },
+                'mist-cool':       { bg1: '#25292C', bg2: '#141719', accent: '#C8D0D5' },
+                'noir-contrast':   { bg1: '#1E1E1E', bg2: '#0D0D0D', accent: '#E0E0E0' },
+                'sepia-soft':      { bg1: '#302A24', bg2: '#191613', accent: '#D8CBB8' }
+            };
+            const p = palettes[tone] || palettes['noir-contrast'];
+
+            return `
+                <div class="w-full h-full relative overflow-hidden flex items-center justify-center transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                     style="background: radial-gradient(circle at 30% 25%, ${p.bg1} 0%, ${p.bg2} 100%);">
+                    <!-- 極簡幾何光影線條（模擬電影景框與光束） -->
+                    <svg class="absolute inset-0 w-full h-full opacity-25" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" fill="none">
+                        <defs>
+                            <linearGradient id="beam-${tone}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="${p.accent}" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="${p.accent}" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <polygon points="180,0 780,0 1320,900 520,900" fill="url(#beam-${tone})" />
+                        <!-- 電影寬銀幕安全框微線 -->
+                        <rect x="64" y="64" width="1472" height="772" stroke="${p.accent}" stroke-opacity="0.22" stroke-width="1"/>
+                        <line x1="800" y1="420" x2="800" y2="480" stroke="${p.accent}" stroke-opacity="0.3" stroke-width="1"/>
+                        <line x1="770" y1="450" x2="830" y2="450" stroke="${p.accent}" stroke-opacity="0.3" stroke-width="1"/>
+                    </svg>
+                    <span class="relative z-10 font-serif-en italic text-lg sm:text-xl tracking-[0.12em] text-paper/45 px-6 text-center select-none">
+                        ${subtitle}
+                    </span>
+                </div>
+            `;
+        }
+
+        /**
+         * 渲染第一頁：個人資訊（About）
+         */
+        function renderAboutPage() {
+            const p = PORTFOLIO_DATA.profile;
+
+            // 左側 4:5 形象照區塊（若無 portraitUrl，呈現極簡藝文光影預留框）
+            const portraitHTML = p.portraitUrl
+                ? `<img src="${p.portraitUrl}" alt="${p.nameEn}" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                   <div class="hidden w-full h-full items-center justify-center bg-[#EBE9E4] text-muted text-xs tracking-widest">PORTRAIT</div>`
+                : `
+                    <div class="w-full h-full relative bg-[#EAE8E3] overflow-hidden flex flex-col justify-between p-6 sm:p-8">
+                        <!-- 極簡建築感幾何光影 SVG -->
+                        <svg class="absolute inset-0 w-full h-full opacity-60" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" fill="none">
+                            <defs>
+                                <linearGradient id="portraitShadow" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#D5D2CA" stop-opacity="0.9"/>
+                                    <stop offset="60%" stop-color="#E5E3DD" stop-opacity="0.2"/>
+                                    <stop offset="100%" stop-color="#FAF9F6" stop-opacity="0.6"/>
+                                </linearGradient>
+                            </defs>
+                            <rect width="400" height="500" fill="url(#portraitShadow)"/>
+                            <circle cx="235" cy="185" r="95" fill="#1A1A1A" fill-opacity="0.06"/>
+                            <path d="M0 320 L400 180 L400 500 L0 500 Z" fill="#1A1A1A" fill-opacity="0.045"/>
+                            <line x1="40" y1="40" x2="40" y2="460" stroke="#1A1A1A" stroke-opacity="0.08" stroke-width="1"/>
+                        </svg>
+                        <div class="relative z-10 flex justify-between items-center font-sans-en text-[10px] tracking-[0.22em] text-muted uppercase">
+                            <span>PORTRAIT 4:5</span>
+                            <span>TAIPEI</span>
+                        </div>
+                        <div class="relative z-10 border-t border-ink/10 pt-4">
+                            <p class="font-serif-en italic text-lg text-ink/70">${p.nameEn}</p>
+                            <p class="font-sans-en text-[10px] tracking-[0.2em] text-muted uppercase mt-1">可於程式碼替換個人形象照</p>
+                        </div>
+                    </div>
+                `;
+
+            // 影展與獎項列表
+            const awardsHTML = p.awards.map(item => `
+                <li class="py-5 border-b border-hairline flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-10 group">
+                    <span class="font-sans-en text-sm tracking-[0.15em] text-muted w-16 shrink-0">${item.year}</span>
+                    <div class="flex-grow">
+                        <p class="font-serif-tc text-base sm:text-lg text-ink tracking-wide">${item.title}</p>
+                        <p class="text-xs sm:text-sm text-muted mt-1 font-light">${item.project}</p>
+                    </div>
+                </li>
+            `).join('');
+
+            // 合作與服務項目
+            const servicesHTML = p.services.map((srv, idx) => `
+                <div class="py-6 border-t border-hairline">
+                    <span class="font-sans-en text-[11px] tracking-[0.2em] text-muted">0${idx + 1}</span>
+                    <h3 class="font-serif-tc text-lg text-ink mt-2 mb-2 tracking-wide">${srv.title}</h3>
+                    <p class="text-sm text-muted leading-relaxed font-light">${srv.desc}</p>
+                </div>
+            `).join('');
+
+            // 外部社群與部落格連結
+            const socialLinksHTML = p.contact.links.map(link => `
+                <a href="${link.url}" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center gap-1.5 text-sm text-ink hover:text-muted transition-colors border-b border-transparent hover:border-muted pb-0.5">
+                    <span>${link.label}</span>
+                    <svg class="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                    </svg>
+                </a>
+            `).join('');
+
+            return `
+                <div class="animate-fade-in space-y-24 sm:space-y-32">
+                    <!-- 上半部：不對稱兩欄留白排版 -->
+                    <section class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+                        <!-- 左側 4:5 形象照框（佔 5 欄） -->
+                        <div class="lg:col-span-5">
+                            <div class="aspect-[4/5] w-full max-w-md mx-auto lg:mx-0 rounded-sm overflow-hidden border border-hairline">
+                                ${portraitHTML}
+                            </div>
+                        </div>
+
+                        <!-- 右側 剪輯師簡介（佔 7 欄） -->
+                        <div class="lg:col-span-7 lg:pt-8 space-y-8">
+                            <div>
+                                <p class="font-sans-en text-[11px] tracking-[0.25em] text-muted uppercase mb-4">ABOUT THE EDITOR</p>
+                                <h1 class="font-serif-tc text-2xl sm:text-4xl font-normal leading-snug tracking-wide text-ink">
+                                    ${p.headline}
+                                </h1>
+                            </div>
+
+                            <div class="space-y-5 text-sm sm:text-base leading-[1.9] text-ink/80 font-light max-w-2xl">
+                                ${p.bio.map(paragraph => `<p>${paragraph}</p>`).join('')}
+                            </div>
+
+                            <!-- 快速瀏覽作品入口 -->
+                            <div class="pt-4 flex flex-wrap items-center gap-6">
+                                <button type="button" onclick="navigateTo('narrative')" 
+                                    class="inline-flex items-center gap-3 text-xs sm:text-sm tracking-[0.16em] text-ink border-b border-ink pb-1.5 hover:opacity-60 transition-opacity">
+                                    <span>瀏覽精選作品</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.25" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                                    </svg>
+                                </button>
+                                <button type="button" onclick="scrollToContact()" 
+                                    class="text-xs sm:text-sm tracking-[0.16em] text-muted hover:text-ink transition-colors pb-1.5">
+                                    合作洽詢
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 影展與獎項紀錄 -->
+                    <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
+                        <div class="lg:col-span-4">
+                            <p class="font-sans-en text-[11px] tracking-[0.25em] text-muted uppercase mb-2">FESTIVALS & AWARDS</p>
+                            <h2 class="font-serif-tc text-2xl font-normal tracking-wider text-ink">影展與獎項紀錄</h2>
+                        </div>
+                        <div class="lg:col-span-8">
+                            <ul class="border-t border-hairline">
+                                ${awardsHTML}
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- 合作與服務項目 -->
+                    <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
+                        <div class="lg:col-span-4">
+                            <p class="font-sans-en text-[11px] tracking-[0.25em] text-muted uppercase mb-2">SERVICES</p>
+                            <h2 class="font-serif-tc text-2xl font-normal tracking-wider text-ink">合作與服務項目</h2>
+                        </div>
+                        <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-2">
+                            ${servicesHTML}
+                        </div>
+                    </section>
+
+                    <!-- 聯絡方式 -->
+                    <section id="contact-section" class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 pt-12 border-t border-hairline">
+                        <div class="lg:col-span-4">
+                            <p class="font-sans-en text-[11px] tracking-[0.25em] text-muted uppercase mb-2">CONTACT</p>
+                            <h2 class="font-serif-tc text-2xl font-normal tracking-wider text-ink">聯絡方式</h2>
+                        </div>
+                        <div class="lg:col-span-8 space-y-8">
+                            <p class="text-sm sm:text-base text-muted font-light leading-relaxed max-w-xl">
+                                歡迎各類劇情長短片、紀錄片、MV、廣告與預告片剪輯合作邀約，請透過信箱聯繫討論專案期程與細節。
+                            </p>
+
+                            <!-- Email 與一鍵複製按鈕 -->
+                            <div class="flex flex-wrap items-center gap-4">
+                                <a href="mailto:${p.contact.email}" class="font-serif-en text-2xl sm:text-3xl tracking-wide text-ink hover:opacity-70 transition-opacity">
+                                    ${p.contact.email}
+                                </a>
+                                <button 
+                                    type="button"
+                                    onclick="copyEmail('${p.contact.email}')"
+                                    class="inline-flex items-center gap-2 px-3.5 py-2 text-xs tracking-[0.12em] text-muted hover:text-ink border border-hairline hover:border-ink/40 rounded-sm transition-all"
+                                    aria-label="複製電子郵件地址"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                    </svg>
+                                    <span>複製 Email</span>
+                                </button>
+                            </div>
+
+                            <!-- 外部社群與部落格連結 -->
+                            <div class="flex flex-wrap items-center gap-8 pt-2">
+                                ${socialLinksHTML}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            `;
+        }
+
+        /**
+         * 渲染作品分類頁（劇情片 / 紀錄片 / MV / 廣告與其他）
+         * @param {string} categoryKey - 分類鍵值
+         */
+        function renderCategoryPage(categoryKey) {
+            const category = PORTFOLIO_DATA.categories[categoryKey];
+            if (!category) return '';
+
+            const cardsHTML = category.items.map(item => {
+                // 縮圖處理：優先使用使用者提供的圖片網址，若未填或載入失敗則顯示電影感預留畫面
+                const mediaHTML = item.thumbnail
+                    ? `<img src="${item.thumbnail}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]" onerror="this.outerHTML = decodeURIComponent('${encodeURIComponent(createCinematicPlaceholder(item.tone, item.subtitle))}')" />`
+                    : createCinematicPlaceholder(item.tone, item.subtitle);
+
+                return `
+                    <article 
+                        onclick="openModal('${categoryKey}', '${item.id}')"
+                        class="group cursor-pointer flex flex-col"
+                        tabindex="0"
+                        role="button"
+                        aria-label="檢視作品：${item.title}"
+                        onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); openModal('${categoryKey}', '${item.id}'); }"
+                    >
+                        <!-- 16:9 寬銀幕作品縮圖容器 -->
+                        <div class="relative w-full aspect-video bg-cinema rounded-sm overflow-hidden mb-5 border border-hairline">
+                            ${mediaHTML}
+
+                            <!-- Hover 極簡暗角與播放標示 -->
+                            <div class="absolute inset-0 bg-cinema/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                                <div class="w-12 h-12 rounded-full border border-paper/70 bg-cinema/40 backdrop-blur-xs flex items-center justify-center transform scale-95 group-hover:scale-100 transition-transform duration-500">
+                                    <svg class="w-4 h-4 text-paper ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5.14v14l11-7-11-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <!-- 右下角極小片長標籤 -->
+                            <span class="absolute bottom-3 right-3 px-2 py-0.5 bg-cinema/65 text-paper/85 font-sans-en text-[10px] tracking-[0.14em] rounded-xs">
+                                ${item.duration}
+                            </span>
+                        </div>
+
+                        <!-- 作品標題與核心資訊 -->
+                        <div class="flex items-baseline justify-between gap-4">
+                            <h2 class="font-serif-tc text-lg sm:text-xl font-normal tracking-wide text-ink group-hover:text-muted transition-colors duration-300">
+                                ${item.title}
+                            </h2>
+                            <span class="font-sans-en text-xs tracking-[0.15em] text-muted shrink-0">
+                                ${item.year}
+                            </span>
+                        </div>
+
+                        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted font-light">
+                            <span>${item.creditLabel}：${item.creditValue}</span>
+                            ${item.tag ? `<span class="text-hairline">|</span><span class="text-ink/70">${item.tag}</span>` : ''}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            return `
+                <div class="animate-fade-in">
+                    <!-- 分頁頂部標題列 -->
+                    <header class="pb-10 sm:pb-14 mb-12 sm:mb-16 border-b border-hairline flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                            <p class="font-sans-en text-[11px] tracking-[0.25em] text-muted uppercase mb-3">
+                                ${category.titleEn}
+                            </p>
+                            <h1 class="font-serif-tc text-3xl sm:text-4xl font-normal tracking-wider text-ink">
+                                ${category.titleZh}
+                            </h1>
+                        </div>
+                        <p class="text-sm text-muted font-light max-w-md md:text-right leading-relaxed">
+                            ${category.description}
+                        </p>
+                    </header>
+
+                    <!-- 兩欄 16:9 寬銀幕作品網格 -->
+                    <section class="grid grid-cols-1 md:grid-cols-2 gap-x-10 lg:gap-x-12 gap-y-14 sm:gap-y-16">
+                        ${cardsHTML}
+                    </section>
+                </div>
+            `;
+        }
+
+        /**
+         * SPA 分頁切換函式
+         * @param {string} page - 目標分頁鍵值
+         * @param {boolean} fromMobile - 是否來自手機版選單
+         */
+        function navigateTo(page, fromMobile = false) {
+            currentPage = page;
+            const appContent = document.getElementById('app-content');
+
+            if (page === 'about') {
+                appContent.innerHTML = renderAboutPage();
+            } else {
+                appContent.innerHTML = renderCategoryPage(page);
+            }
+
+            updateActiveNavStyles();
+
+            if (fromMobile && isMobileMenuOpen) {
+                toggleMobileMenu();
+            }
+
+            // 切換頁面時平滑捲回頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /**
+         * 更新桌機與手機導覽列的當前分頁底線樣式
+         */
+        function updateActiveNavStyles() {
+            // 桌機版按鈕
+            document.querySelectorAll('.nav-link').forEach(btn => {
+                const isActive = btn.dataset.nav === currentPage;
+                if (isActive) {
+                    btn.classList.add('text-ink', 'after:content-[""]', 'after:absolute', 'after:left-0', 'after:right-0', 'after:bottom-0', 'after:h-[1px]', 'after:bg-ink');
+                    btn.classList.remove('text-muted', 'hover:text-ink');
+                } else {
+                    btn.classList.remove('text-ink', 'after:content-[""]', 'after:absolute', 'after:left-0', 'after:right-0', 'after:bottom-0', 'after:h-[1px]', 'after:bg-ink');
+                    btn.classList.add('text-muted', 'hover:text-ink');
+                }
+            });
+
+            // 手機版按鈕
+            document.querySelectorAll('.mobile-nav-link').forEach(btn => {
+                const isActive = btn.dataset.mobileNav === currentPage;
+                if (isActive) {
+                    btn.classList.add('text-ink', 'border-b', 'border-ink');
+                    btn.classList.remove('text-muted');
+                } else {
+                    btn.classList.remove('text-ink', 'border-b', 'border-ink');
+                    btn.classList.add('text-muted');
+                }
+            });
+        }
+
+        /**
+         * 切換手機版全螢幕選單
+         */
+        function toggleMobileMenu() {
+            isMobileMenuOpen = !isMobileMenuOpen;
+            const menu = document.getElementById('mobile-menu');
+            const btn = document.getElementById('mobile-menu-btn');
+            const line1 = document.getElementById('burger-line-1');
+            const line2 = document.getElementById('burger-line-2');
+            const line3 = document.getElementById('burger-line-3');
+
+            btn.setAttribute('aria-expanded', String(isMobileMenuOpen));
+            menu.setAttribute('aria-hidden', String(!isMobileMenuOpen));
+
+            if (isMobileMenuOpen) {
+                menu.classList.remove('opacity-0', 'pointer-events-none');
+                menu.classList.add('opacity-100', 'pointer-events-auto');
+                document.body.style.overflow = 'hidden';
+                // 漢堡圖示轉為極簡 X
+                line1.classList.add('translate-y-[7.5px]', 'rotate-45');
+                line2.classList.add('opacity-0');
+                line3.classList.add('-translate-y-[7.5px]', '-rotate-45');
+            } else {
+                menu.classList.add('opacity-0', 'pointer-events-none');
+                menu.classList.remove('opacity-100', 'pointer-events-auto');
+                document.body.style.overflow = '';
+                // 還原漢堡圖示
+                line1.classList.remove('translate-y-[7.5px]', 'rotate-45');
+                line2.classList.remove('opacity-0');
+                line3.classList.remove('-translate-y-[7.5px]', '-rotate-45');
+            }
+        }
+
+        /**
+         * 開啟作品燈箱（Lightbox Modal）
+         * @param {string} categoryKey - 分類鍵值
+         * @param {string} projectId - 作品 ID
+         */
+        function openModal(categoryKey, projectId) {
+            try {
+                const category = PORTFOLIO_DATA.categories[categoryKey];
+                const project = category?.items.find(item => item.id === projectId);
+                if (!project) return;
+
+                const modal = document.getElementById('project-modal');
+                const videoContainer = document.getElementById('modal-video-container');
+
+                // 填入標題與基本文字
+                document.getElementById('modal-category-label').textContent = category.titleEn;
+                document.getElementById('modal-title').textContent = project.title;
+                document.getElementById('modal-subtitle').textContent = project.subtitle;
+                document.getElementById('modal-year').textContent = project.year;
+                document.getElementById('modal-notes').textContent = project.notes;
+
+                // 填入技術資訊欄位
+                document.getElementById('modal-meta').innerHTML = `
+                    <div>
+                        <span class="block font-sans-en text-[10px] tracking-[0.2em] text-muted uppercase mb-1">ROLE</span>
+                        <span class="text-ink font-light">${project.role}</span>
+                    </div>
+                    <div>
+                        <span class="block font-sans-en text-[10px] tracking-[0.2em] text-muted uppercase mb-1">${project.creditLabel}</span>
+                        <span class="text-ink font-light">${project.creditValue}</span>
+                    </div>
+                    <div>
+                        <span class="block font-sans-en text-[10px] tracking-[0.2em] text-muted uppercase mb-1">DURATION</span>
+                        <span class="font-sans-en text-ink font-light">${project.duration}</span>
+                    </div>
+                    <div>
+                        <span class="block font-sans-en text-[10px] tracking-[0.2em] text-muted uppercase mb-1">NOTE / FESTIVAL</span>
+                        <span class="text-ink font-light">${project.tag || '—'}</span>
+                    </div>
+                `;
+
+                // 判斷是否已設定 YouTube / Vimeo 嵌入網址
+                if (project.videoUrl && project.videoUrl.trim() !== '') {
+                    videoContainer.innerHTML = `
+                        <iframe 
+                            src="${project.videoUrl}" 
+                            title="${project.title}"
+                            class="w-full h-full border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
+                    `;
+                } else {
+                    // 尚未填入連結時：呈現極簡電影質感模擬播放畫面
+                    videoContainer.innerHTML = `
+                        <div class="w-full h-full relative flex flex-col items-center justify-center bg-[#121212] text-paper select-none">
+                            <!-- 微弱電影寬銀幕裝飾框線 -->
+                            <div class="absolute inset-5 sm:inset-8 border border-paper/10 pointer-events-none flex flex-col justify-between p-4">
+                                <div class="flex justify-between font-sans-en text-[10px] tracking-[0.22em] text-paper/35 uppercase">
+                                    <span>REC • 24FPS</span>
+                                    <span>16:9 HD</span>
+                                </div>
+                                <div class="flex justify-between font-sans-en text-[10px] tracking-[0.22em] text-paper/35">
+                                    <span>TC 00:00:00:00</span>
+                                    <span>${project.duration}</span>
+                                </div>
+                            </div>
+
+                            <!-- 模擬播放按鈕 -->
+                            <button 
+                                type="button"
+                                onclick="showToast('範例預覽模式：請於程式碼 PORTFOLIO_DATA 填入 YouTube 或 Vimeo 嵌入連結')"
+                                class="relative z-10 group flex flex-col items-center gap-4 focus:outline-none"
+                            >
+                                <span class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-paper/40 flex items-center justify-center group-hover:border-paper group-hover:scale-105 transition-all duration-300 bg-paper/5">
+                                    <svg class="w-6 h-6 text-paper ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5.14v14l11-7-11-7z"/>
+                                    </svg>
+                                </span>
+                                <span class="font-sans-en text-[11px] tracking-[0.24em] text-paper/60 group-hover:text-paper transition-colors uppercase">
+                                    Play Preview
+                                </span>
+                            </button>
+
+                            <p class="absolute bottom-6 sm:bottom-10 text-[11px] text-paper/40 tracking-wider px-6 text-center">
+                                可於程式碼 PORTFOLIO_DATA 替換為 YouTube / Vimeo 嵌入網址
+                            </p>
+                        </div>
+                    `;
+                }
+
+                // 顯示燈箱並鎖定背景捲動
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+            } catch (error) {
+                console.error('開啟作品燈箱時發生錯誤:', error);
+            }
+        }
+
+        /**
+         * 關閉作品燈箱並停止影片播放
+         */
+        function closeModal() {
+            const modal = document.getElementById('project-modal');
+            const videoContainer = document.getElementById('modal-video-container');
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            // 清空容器以確保 iframe 影片立即停止播放
+            videoContainer.innerHTML = '';
+
+            if (!isMobileMenuOpen) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        /**
+         * 一鍵複製 Email（使用相容於 iFrame 環境的 execCommand 機制）
+         * @param {string} email - 要複製的電子郵件地址
+         */
+        function copyEmail(email) {
+            try {
+                const tempInput = document.createElement('textarea');
+                tempInput.value = email;
+                tempInput.setAttribute('readonly', '');
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-9999px';
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                showToast(`已複製 ${email} 至剪貼簿`);
+            } catch (err) {
+                console.error('複製失敗:', err);
+                showToast('複製失敗，請手動選取 Email');
+            }
+        }
+
+        /**
+         * 平滑捲動至「個人資訊」頁面的聯絡方式區塊
+         */
+        function scrollToContact() {
+            const contactEl = document.getElementById('contact-section');
+            if (contactEl) {
+                contactEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        /**
+         * 顯示極簡提示訊息（Toast）
+         * @param {string} message - 提示內容
+         */
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 3200);
+        }
+
+        // 監聽 ESC 鍵關閉燈箱或手機選單
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('project-modal');
+                if (!modal.classList.contains('hidden')) {
+                    closeModal();
+                } else if (isMobileMenuOpen) {
+                    toggleMobileMenu();
+                }
+            }
+        });
+
+        // 網頁載入完成後初始化第一頁（個人資訊）
+        window.addEventListener('DOMContentLoaded', () => {
+            navigateTo('about');
+        });
+    </script>
+</body>
+</html>
